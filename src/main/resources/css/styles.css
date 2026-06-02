@@ -1,0 +1,105 @@
+.root {
+    -fx-font-family: "Segoe UI";
+    -fx-background-color: #f4f6f8;
+}
+
+.label {
+    -fx-text-fill: #1f2937;
+    -fx-font-size: 14px;
+}
+
+.titulo {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #111827;
+}
+
+.subtitulo {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #374151;
+}
+
+.button {
+    -fx-background-color: #2563eb;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8px;
+    -fx-padding: 8 14 8 14;
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: #1d4ed8;
+}
+
+.button-secundario {
+    -fx-background-color: #6b7280;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8px;
+    -fx-padding: 8 14 8 14;
+    -fx-cursor: hand;
+}
+
+.button-secundario:hover {
+    -fx-background-color: #4b5563;
+}
+
+.text-field,
+.password-field,
+.date-picker,
+.combo-box {
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-border-color: #d1d5db;
+    -fx-border-width: 1px;
+    -fx-padding: 8px;
+    -fx-background-color: white;
+}
+
+.text-field:focused,
+.password-field:focused,
+.date-picker:focused,
+.combo-box:focused {
+    -fx-border-color: #2563eb;
+    -fx-border-width: 2px;
+}
+
+.table-view {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: #e5e7eb;
+}
+
+.table-view .column-header,
+.table-view .filler {
+    -fx-background-color: #e5e7eb;
+    -fx-size: 36px;
+    -fx-border-color: transparent transparent #d1d5db transparent;
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #111827;
+    -fx-font-weight: bold;
+}
+
+.mensaje-error {
+    -fx-text-fill: #dc2626;
+    -fx-font-weight: bold;
+}
+
+.panel-card {
+    -fx-background-color: white;
+    -fx-background-radius: 12px;
+    -fx-padding: 20px;
+    -fx-border-color: #e5e7eb;
+    -fx-border-radius: 12px;
+}

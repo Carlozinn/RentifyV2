@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="15.0"
+      xmlns="http://javafx.com/javafx/25"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.rentify.controller.PagoFormController"
+      styleClass="panel-card">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Generar pago" styleClass="titulo"/>
+
+    <GridPane hgap="10" vgap="10">
+        <Label text="Total meses:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <Label fx:id="lblTotalMeses" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Pagos registrados:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <Label fx:id="lblPagosRegistrados" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="Pagos restantes:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <Label fx:id="lblPagosRestantes" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Siguiente periodo:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <Label fx:id="lblSiguientePeriodo" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="Fecha vencimiento:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <DatePicker fx:id="dpFechaVencimiento" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+        <Label text="Periodo mes:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtPeriodoMes" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+
+        <Label text="Periodo año:" GridPane.rowIndex="6" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtPeriodoAnio" GridPane.rowIndex="6" GridPane.columnIndex="1"/>
+
+        <Label text="Monto:" GridPane.rowIndex="7" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtMonto" GridPane.rowIndex="7" GridPane.columnIndex="1"/>
+
+        <Label text="Método pago:" GridPane.rowIndex="8" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="cbMetodoPago" prefWidth="200" GridPane.rowIndex="8" GridPane.columnIndex="1"/>
+
+        <Label text="Estado:" GridPane.rowIndex="9" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="cbEstadoPago" prefWidth="200" GridPane.rowIndex="9" GridPane.columnIndex="1"/>
+
+        <Label text="Referencia:" GridPane.rowIndex="10" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtReferenciaPago" GridPane.rowIndex="10" GridPane.columnIndex="1"/>
+
+        <Label text="Comprobante:" GridPane.rowIndex="11" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtComprobantePago" GridPane.rowIndex="11" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <HBox spacing="10">
+        <Button text="Guardar pago" onAction="#guardarPago"/>
+        <Button text="Cancelar" onAction="#cancelar" styleClass="button-secundario"/>
+    </HBox>
+
+    <Label fx:id="lblMensaje" text="" styleClass="mensaje-error"/>
+
+</VBox>

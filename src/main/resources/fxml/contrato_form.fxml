@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="15.0"
+      xmlns="http://javafx.com/javafx/25"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.rentify.controller.ContratoFormController"
+      styleClass="panel-card">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Generar contrato" styleClass="titulo"/>
+
+    <GridPane hgap="10" vgap="10">
+        <Label text="Folio contrato:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtFolioContrato" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <HBox spacing="10">
+        <Button text="Guardar contrato" onAction="#guardarContrato"/>
+        <Button text="Cancelar" onAction="#cancelar" styleClass="button-secundario"/>
+    </HBox>
+
+    <Label fx:id="lblMensaje" text="" styleClass="mensaje-error"/>
+
+</VBox>

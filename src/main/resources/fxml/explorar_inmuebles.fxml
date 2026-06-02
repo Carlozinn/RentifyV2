@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="15.0"
+      xmlns="http://javafx.com/javafx/25"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.rentify.controller.ExplorarInmueblesController"
+      styleClass="panel-card">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <GridPane hgap="10" vgap="10">
+        <Label text="Ciudad:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtCiudadFiltro" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Tipo:" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+        <ComboBox fx:id="cbTipoFiltro" prefWidth="180" GridPane.rowIndex="0" GridPane.columnIndex="3"/>
+
+        <Label text="Precio máximo:" GridPane.rowIndex="0" GridPane.columnIndex="4"/>
+        <TextField fx:id="txtPrecioMaximoFiltro" GridPane.rowIndex="0" GridPane.columnIndex="5"/>
+    </GridPane>
+
+    <HBox spacing="10">
+        <Button text="Cargar inmuebles" onAction="#cargarInmuebles"/>
+        <Button text="Filtrar" onAction="#filtrarInmuebles"/>
+        <Button text="Limpiar filtros" onAction="#limpiarFiltros"/>
+        <Button text="Ver detalle" onAction="#verDetalleInmueble"/>
+        <Button text="Solicitar arrendamiento" onAction="#solicitarArrendamiento"/>
+        <Button text="Volver" onAction="#volverAlPanel" styleClass="button-secundario"/>
+    </HBox>
+
+    <TableView fx:id="tablaInmuebles" prefHeight="400">
+        <columns>
+            <TableColumn fx:id="colId" text="ID" prefWidth="60"/>
+            <TableColumn fx:id="colTitulo" text="Título" prefWidth="180"/>
+            <TableColumn fx:id="colCiudad" text="Ciudad" prefWidth="120"/>
+            <TableColumn fx:id="colTipo" text="Tipo" prefWidth="120"/>
+            <TableColumn fx:id="colPrecio" text="Renta" prefWidth="120"/>
+            <TableColumn fx:id="colArrendador" text="Arrendador" prefWidth="160"/>
+        </columns>
+    </TableView>
+
+</VBox>

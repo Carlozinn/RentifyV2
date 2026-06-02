@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="15.0"
+      xmlns="http://javafx.com/javafx/25"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.rentify.controller.IncidenciasController"
+      styleClass="panel-card">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <HBox spacing="10">
+        <Button text="Cargar incidencias" onAction="#cargarIncidencias"/>
+        <Button text="Ver detalle" onAction="#verDetalleIncidencia"/>
+        <Button fx:id="btnNuevaIncidencia" text="Nueva incidencia" onAction="#abrirNuevaIncidencia"/>
+        <Button fx:id="btnEnProceso" text="Marcar en proceso" onAction="#marcarEnProceso"/>
+        <Button fx:id="btnResolver" text="Resolver" onAction="#abrirResolverIncidencia"/>
+        <Button text="Volver" onAction="#volverAlPanel" styleClass="button-secundario"/>
+    </HBox>
+
+    <TableView fx:id="tablaIncidencias" prefHeight="420">
+        <columns>
+            <TableColumn fx:id="colId" text="ID" prefWidth="60"/>
+            <TableColumn fx:id="colTitulo" text="Título" prefWidth="180"/>
+            <TableColumn fx:id="colArrendamiento" text="Arrendamiento" prefWidth="220"/>
+            <TableColumn fx:id="colReporta" text="Reporta" prefWidth="150"/>
+            <TableColumn fx:id="colFechaReporte" text="Fecha" prefWidth="170"/>
+            <TableColumn fx:id="colPrioridad" text="Prioridad" prefWidth="100"/>
+            <TableColumn fx:id="colEstado" text="Estado" prefWidth="100"/>
+        </columns>
+    </TableView>
+
+</VBox>

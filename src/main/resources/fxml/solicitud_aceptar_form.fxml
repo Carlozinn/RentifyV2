@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox spacing="15.0"
+      xmlns="http://javafx.com/javafx/25"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.rentify.controller.AceptarSolicitudController"
+      styleClass="panel-card">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Aceptar solicitud y generar arrendamiento" styleClass="titulo"/>
+
+    <GridPane hgap="10" vgap="10">
+        <Label text="Fecha inicio:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <DatePicker fx:id="dpFechaInicio" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="Fecha fin:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <DatePicker fx:id="dpFechaFin" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="Monto mensual:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtMontoMensual" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="Depósito garantía (opcional):" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <TextField fx:id="txtDepositoGarantia" promptText="\$0.00" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+
+        <Label text="Día de pago:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="cbDiaPago" prefWidth="200" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+
+        <Label text="Observaciones:" GridPane.rowIndex="5" GridPane.columnIndex="0"/>
+        <TextArea fx:id="txtObservaciones" prefRowCount="3" GridPane.rowIndex="5" GridPane.columnIndex="1"/>
+    </GridPane>
+
+    <HBox spacing="10">
+        <Button text="Aceptar y generar" onAction="#aceptarYGenerar"/>
+        <Button text="Cancelar" onAction="#cancelar" styleClass="button-secundario"/>
+    </HBox>
+
+    <Label fx:id="lblMensaje" text="" styleClass="mensaje-error"/>
+
+</VBox>
