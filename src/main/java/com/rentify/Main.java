@@ -1,9 +1,11 @@
 package com.rentify;
 
+import com.rentify.util.Navegacion;
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 public class Main extends Application {
@@ -17,10 +19,12 @@ public class Main extends Application {
                 getClass().getResource("/fxml/login.fxml")
         );
 
+        Rectangle2D pantalla = Screen.getPrimary().getVisualBounds();
+
         Scene scene = new Scene(
                 loader.load(),
-                ANCHO_MINIMO,
-                ALTO_MINIMO
+                pantalla.getWidth(),
+                pantalla.getHeight()
         );
 
         scene.getStylesheets().add(
@@ -28,17 +32,12 @@ public class Main extends Application {
         );
 
         primaryStage.setTitle("Rentify - Login");
+        primaryStage.setScene(scene);
+        primaryStage.setResizable(true);
         primaryStage.setMinWidth(ANCHO_MINIMO);
         primaryStage.setMinHeight(ALTO_MINIMO);
-        primaryStage.setResizable(true);
-        primaryStage.setScene(scene);
 
-        primaryStage.show();
-
-        Platform.runLater(() -> {
-            primaryStage.setMaximized(true);
-            primaryStage.toFront();
-        });
+        Navegacion.ajustarPantallaCompleta(primaryStage);
     }
 
     public static void main(String[] args) {

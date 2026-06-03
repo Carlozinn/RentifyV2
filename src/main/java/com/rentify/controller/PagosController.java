@@ -8,7 +8,12 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
 
@@ -17,6 +22,9 @@ import java.util.List;
 import java.util.Optional;
 
 public class PagosController {
+
+    private static final int ROL_ARRENDADOR = 2;
+    private static final int ROL_ARRENDATARIO = 3;
 
     @FXML
     private TableView<PagoTabla> tablaPagos;
@@ -65,6 +73,12 @@ public class PagosController {
 
     @FXML
     public void initialize() {
+        configurarColumnas();
+        configurarVistaSegunRol();
+        cargarPagos();
+    }
+
+    private void configurarColumnas() {
         colId.setCellValueFactory(new PropertyValueFactory<>("idPago"));
         colInmueble.setCellValueFactory(new PropertyValueFactory<>("inmueble"));
         colContraparte.setCellValueFactory(new PropertyValueFactory<>("contraparte"));
@@ -76,16 +90,13 @@ public class PagosController {
         colReferencia.setCellValueFactory(new PropertyValueFactory<>("referenciaPago"));
         colComprobante.setCellValueFactory(new PropertyValueFactory<>("comprobante"));
         colEstado.setCellValueFactory(new PropertyValueFactory<>("estado"));
-
-        configurarVistaSegunRol();
-        cargarPagos();
     }
 
     private void configurarVistaSegunRol() {
-        if (Sesion.getUsuarioActual() != null && Sesion.getUsuarioActual().getIdRol() == 2) {
-            btnPagar.setVisible(false);
-            btnPagar.setManaged(false);
-        }
+        boolean puedePagar = esRol(ROL_ARRENDATARIO);
+
+        btnPagar.setVisible(puedePagar);
+        btnPagar.setManaged(puedePagar);
     }
 
     @FXML
@@ -95,24 +106,21 @@ public class PagosController {
             return;
         }
 
-        /*
-         * Antes de mostrar los pagos, actualizamos automáticamente
-         * los pagos vencidos.
-         */
         pagoDAO.actualizarPagosVencidos();
 
         List<PagoTabla> lista;
 
-        if (Sesion.getUsuarioActual().getIdRol() == 2) {
+        if (esRol(ROL_ARRENDADOR)) {
             lista = pagoDAO.listarPagosComoArrendador(
                     Sesion.getUsuarioActual().getIdUsuario()
             );
-        } else if (Sesion.getUsuarioActual().getIdRol() == 3) {
+        } else if (esRol(ROL_ARRENDATARIO)) {
             lista = pagoDAO.listarPagosComoArrendatario(
                     Sesion.getUsuarioActual().getIdUsuario()
             );
         } else {
             mostrarError("Este módulo no aplica para este rol.");
+            tablaPagos.setItems(FXCollections.observableArrayList());
             return;
         }
 
@@ -122,73 +130,146 @@ public class PagosController {
 
     @FXML
     private void pagarPago() {
-        if (Sesion.getUsuarioActual() == null || Sesion.getUsuarioActual().getIdRol() != 3) {
+        if (!esRol(ROL_ARRENDATARIO)) {
             mostrarError("Solo el arrendatario puede pagar.");
             return;
         }
 
-        PagoTabla seleccionado = tablaPagos.getSelectionModel().getSelectedItem();
+        PagoTabla seleccionado = obtenerPagoSeleccionado();
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un pago.");
             return;
         }
 
-        if (!"Pendiente".equalsIgnoreCase(seleccionado.getEstado())) {
-            mostrarError("Solo puedes pagar pagos pendientes.");
+        boolean esPendiente = "Pendiente".equalsIgnoreCase(seleccionado.getEstado());
+        boolean esVencido = "Vencido".equalsIgnoreCase(seleccionado.getEstado());
+
+        if (!esPendiente && !esVencido) {
+            mostrarError("Solo puedes pagar pagos pendientes o vencidos.");
             return;
         }
 
-        ChoiceDialog<String> dialog = new ChoiceDialog<>(
-                "Transferencia",
-                "Transferencia",
-                "Efectivo",
-                "Tarjeta"
+        boolean confirmado = confirmarPago(seleccionado, esVencido);
+
+        if (!confirmado) {
+            return;
+        }
+
+        Optional<String> metodoSeleccionado = seleccionarMetodoPago();
+
+        if (metodoSeleccionado.isEmpty()) {
+            return;
+        }
+
+        int idMetodoPago = convertirMetodoPagoAId(metodoSeleccionado.get());
+
+        boolean pagado = pagoDAO.pagarPago(
+                seleccionado.getIdPago(),
+                idMetodoPago
         );
-        dialog.setTitle("Pagar");
-        dialog.setHeaderText("Selecciona el método de pago");
-        dialog.setContentText("Método:");
 
-        Optional<String> resultado = dialog.showAndWait();
+        if (pagado) {
+            cargarPagos();
 
-        if (resultado.isPresent()) {
-            int idMetodoPago = convertirMetodoPagoAId(resultado.get());
-
-            boolean pagado = pagoDAO.pagarPago(seleccionado.getIdPago(), idMetodoPago);
-
-            if (pagado) {
-                cargarPagos();
-                mostrarInformacion("Pago realizado correctamente.");
+            if (esVencido) {
+                mostrarInformacion("Pago vencido liquidado correctamente.");
             } else {
-                mostrarError("No se pudo registrar el pago.");
+                mostrarInformacion("Pago realizado correctamente.");
             }
+
+        } else {
+            mostrarError("No se pudo registrar el pago.");
         }
     }
 
     @FXML
     private void volverAlPanel() {
         try {
+            if (Sesion.getUsuarioActual() == null) {
+                volverALogin();
+                return;
+            }
+
             FXMLLoader loader;
             String titulo;
 
-            if (Sesion.getUsuarioActual() != null && Sesion.getUsuarioActual().getIdRol() == 2) {
+            if (esRol(ROL_ARRENDADOR)) {
                 loader = Navegacion.cargarVista("/fxml/arrendador.fxml");
                 ArrendadorController controller = loader.getController();
                 controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
                 titulo = "Rentify - Arrendador";
-            } else {
+            } else if (esRol(ROL_ARRENDATARIO)) {
                 loader = Navegacion.cargarVista("/fxml/arrendatario.fxml");
                 ArrendatarioController controller = loader.getController();
                 controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
                 titulo = "Rentify - Arrendatario";
+            } else {
+                mostrarError("Este módulo no aplica para este rol.");
+                return;
             }
 
             Stage stage = (Stage) tablaPagos.getScene().getWindow();
             Navegacion.cambiarEscena(stage, loader, titulo);
+
         } catch (IOException e) {
             mostrarError("No se pudo volver al panel.");
             e.printStackTrace();
         }
+    }
+
+    private PagoTabla obtenerPagoSeleccionado() {
+        PagoTabla seleccionado = tablaPagos.getSelectionModel().getSelectedItem();
+
+        if (seleccionado == null) {
+            mostrarError("Selecciona un pago.");
+            return null;
+        }
+
+        return seleccionado;
+    }
+
+    private boolean confirmarPago(PagoTabla pago, boolean esVencido) {
+        String mensaje;
+
+        if (esVencido) {
+            mensaje =
+                    "Este pago está vencido.\n\n" +
+                            "Periodo: " + pago.getPeriodo() + "\n" +
+                            "Inmueble: " + pago.getInmueble() + "\n" +
+                            "Monto: " + pago.getMonto() + "\n\n" +
+                            "¿Deseas liquidarlo ahora?";
+        } else {
+            mensaje =
+                    "Vas a registrar el pago siguiente:\n\n" +
+                            "Periodo: " + pago.getPeriodo() + "\n" +
+                            "Inmueble: " + pago.getInmueble() + "\n" +
+                            "Monto: " + pago.getMonto() + "\n\n" +
+                            "¿Deseas continuar?";
+        }
+
+        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmacion.setTitle("Confirmar pago");
+        confirmacion.setHeaderText(esVencido ? "Liquidar pago vencido" : "Registrar pago");
+        confirmacion.setContentText(mensaje);
+
+        Optional<ButtonType> respuesta = confirmacion.showAndWait();
+
+        return respuesta.isPresent() && respuesta.get() == ButtonType.OK;
+    }
+
+    private Optional<String> seleccionarMetodoPago() {
+        ChoiceDialog<String> dialog = new ChoiceDialog<>(
+                "Transferencia",
+                "Transferencia",
+                "Efectivo",
+                "Tarjeta"
+        );
+
+        dialog.setTitle("Método de pago");
+        dialog.setHeaderText("Selecciona el método de pago");
+        dialog.setContentText("Método:");
+
+        return dialog.showAndWait();
     }
 
     private int convertirMetodoPagoAId(String metodo) {
@@ -198,6 +279,17 @@ public class PagosController {
             case "Tarjeta" -> 3;
             default -> 1;
         };
+    }
+
+    private boolean esRol(int idRol) {
+        return Sesion.getUsuarioActual() != null
+                && Sesion.getUsuarioActual().getIdRol() == idRol;
+    }
+
+    private void volverALogin() throws IOException {
+        FXMLLoader loader = Navegacion.cargarVista("/fxml/login.fxml");
+        Stage stage = (Stage) tablaPagos.getScene().getWindow();
+        Navegacion.cambiarEscena(stage, loader, "Rentify - Login");
     }
 
     private void mostrarError(String mensaje) {

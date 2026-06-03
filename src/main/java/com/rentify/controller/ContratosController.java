@@ -10,20 +10,22 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
-import javafx.scene.control.ButtonType;
 
 import java.awt.Desktop;
 import java.io.File;
-import java.util.Optional;
-
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 public class ContratosController {
+
+    private static final int ROL_ARRENDADOR = 2;
+    private static final int ROL_ARRENDATARIO = 3;
 
     @FXML
     private TableView<ContratoTabla> tablaContratos;
@@ -69,6 +71,12 @@ public class ContratosController {
 
     @FXML
     public void initialize() {
+        configurarColumnas();
+        configurarVistaSegunRol();
+        cargarContratos();
+    }
+
+    private void configurarColumnas() {
         colId.setCellValueFactory(new PropertyValueFactory<>("idContrato"));
         colFolio.setCellValueFactory(new PropertyValueFactory<>("folioContrato"));
         colInmueble.setCellValueFactory(new PropertyValueFactory<>("inmueble"));
@@ -77,50 +85,15 @@ public class ContratosController {
         colFechaFirma.setCellValueFactory(new PropertyValueFactory<>("fechaFirma"));
         colEstado.setCellValueFactory(new PropertyValueFactory<>("estado"));
         colArchivo.setCellValueFactory(new PropertyValueFactory<>("archivoPdf"));
-
-        configurarVistaSegunRol();
-        cargarContratos();
     }
 
     private void configurarVistaSegunRol() {
-        if (Sesion.getUsuarioActual() == null) {
-            return;
-        }
+        boolean esArrendador = esRol(ROL_ARRENDADOR);
+        boolean esArrendatario = esRol(ROL_ARRENDATARIO);
 
-        int idRol = Sesion.getUsuarioActual().getIdRol();
-
-        if (idRol == 2) {
-            /*
-             * Arrendador:
-             * - puede cancelar contratos generados
-             * - puede abrir PDF
-             * - no firma el contrato
-             */
-            btnFirmarContrato.setVisible(false);
-            btnFirmarContrato.setManaged(false);
-
-            btnCancelarContrato.setVisible(true);
-            btnCancelarContrato.setManaged(true);
-
-            btnAbrirPdf.setVisible(true);
-            btnAbrirPdf.setManaged(true);
-
-        } else if (idRol == 3) {
-            /*
-             * Arrendatario:
-             * - puede firmar contratos generados
-             * - puede abrir PDF
-             * - no cancela contrato
-             */
-            btnFirmarContrato.setVisible(true);
-            btnFirmarContrato.setManaged(true);
-
-            btnCancelarContrato.setVisible(false);
-            btnCancelarContrato.setManaged(false);
-
-            btnAbrirPdf.setVisible(true);
-            btnAbrirPdf.setManaged(true);
-        }
+        mostrarBoton(btnAbrirPdf, esArrendador || esArrendatario);
+        mostrarBoton(btnCancelarContrato, esArrendador);
+        mostrarBoton(btnFirmarContrato, esArrendatario);
     }
 
     @FXML
@@ -132,16 +105,17 @@ public class ContratosController {
 
         List<ContratoTabla> lista;
 
-        if (Sesion.getUsuarioActual().getIdRol() == 2) {
+        if (esRol(ROL_ARRENDADOR)) {
             lista = contratoDAO.listarContratosComoArrendador(
                     Sesion.getUsuarioActual().getIdUsuario()
             );
-        } else if (Sesion.getUsuarioActual().getIdRol() == 3) {
+        } else if (esRol(ROL_ARRENDATARIO)) {
             lista = contratoDAO.listarContratosComoArrendatario(
                     Sesion.getUsuarioActual().getIdUsuario()
             );
         } else {
             mostrarError("Este módulo no aplica para este rol.");
+            tablaContratos.setItems(FXCollections.observableArrayList());
             return;
         }
 
@@ -151,15 +125,14 @@ public class ContratosController {
 
     @FXML
     private void firmarContrato() {
-        if (Sesion.getUsuarioActual() == null || Sesion.getUsuarioActual().getIdRol() != 3) {
+        if (!esRol(ROL_ARRENDATARIO)) {
             mostrarError("Solo el arrendatario puede firmar contratos.");
             return;
         }
 
-        ContratoTabla seleccionado = tablaContratos.getSelectionModel().getSelectedItem();
+        ContratoTabla seleccionado = obtenerContratoSeleccionado();
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un contrato.");
             return;
         }
 
@@ -168,19 +141,16 @@ public class ContratosController {
             return;
         }
 
-        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmacion.setTitle("Confirmar firma");
-        confirmacion.setHeaderText("Firmar contrato");
-        confirmacion.setContentText(
+        boolean confirmado = confirmar(
+                "Confirmar firma",
+                "Firmar contrato",
                 "¿Confirmas que deseas firmar este contrato?\n\n" +
                         "Folio: " + seleccionado.getFolioContrato() + "\n" +
                         "Inmueble: " + seleccionado.getInmueble() + "\n\n" +
                         "Después de firmarlo, el arrendador podrá generar los pagos correspondientes."
         );
 
-        Optional<ButtonType> resultado = confirmacion.showAndWait();
-
-        if (resultado.isEmpty() || resultado.get() != ButtonType.OK) {
+        if (!confirmado) {
             return;
         }
 
@@ -196,15 +166,14 @@ public class ContratosController {
 
     @FXML
     private void cancelarContrato() {
-        if (Sesion.getUsuarioActual() == null || Sesion.getUsuarioActual().getIdRol() != 2) {
+        if (!esRol(ROL_ARRENDADOR)) {
             mostrarError("Solo el arrendador puede cancelar contratos.");
             return;
         }
 
-        ContratoTabla seleccionado = tablaContratos.getSelectionModel().getSelectedItem();
+        ContratoTabla seleccionado = obtenerContratoSeleccionado();
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un contrato.");
             return;
         }
 
@@ -215,6 +184,18 @@ public class ContratosController {
 
         if ("Cancelado".equalsIgnoreCase(seleccionado.getEstado())) {
             mostrarError("El contrato ya está cancelado.");
+            return;
+        }
+
+        boolean confirmado = confirmar(
+                "Confirmar cancelación",
+                "Cancelar contrato",
+                "¿Deseas cancelar este contrato?\n\n" +
+                        "Folio: " + seleccionado.getFolioContrato() + "\n" +
+                        "Inmueble: " + seleccionado.getInmueble()
+        );
+
+        if (!confirmado) {
             return;
         }
 
@@ -230,10 +211,14 @@ public class ContratosController {
 
     @FXML
     private void abrirPdfContrato() {
-        ContratoTabla seleccionado = tablaContratos.getSelectionModel().getSelectedItem();
+        if (!esRol(ROL_ARRENDADOR) && !esRol(ROL_ARRENDATARIO)) {
+            mostrarError("No tienes permiso para consultar contratos.");
+            return;
+        }
+
+        ContratoTabla seleccionado = obtenerContratoSeleccionado();
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un contrato.");
             return;
         }
 
@@ -268,27 +253,74 @@ public class ContratosController {
     @FXML
     private void volverAlPanel() {
         try {
+            if (Sesion.getUsuarioActual() == null) {
+                volverALogin();
+                return;
+            }
+
             FXMLLoader loader;
             String titulo;
 
-            if (Sesion.getUsuarioActual() != null && Sesion.getUsuarioActual().getIdRol() == 2) {
+            if (esRol(ROL_ARRENDADOR)) {
                 loader = Navegacion.cargarVista("/fxml/arrendador.fxml");
                 ArrendadorController controller = loader.getController();
                 controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
                 titulo = "Rentify - Arrendador";
-            } else {
+            } else if (esRol(ROL_ARRENDATARIO)) {
                 loader = Navegacion.cargarVista("/fxml/arrendatario.fxml");
                 ArrendatarioController controller = loader.getController();
                 controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
                 titulo = "Rentify - Arrendatario";
+            } else {
+                mostrarError("Este módulo no aplica para este rol.");
+                return;
             }
 
             Stage stage = (Stage) tablaContratos.getScene().getWindow();
             Navegacion.cambiarEscena(stage, loader, titulo);
+
         } catch (IOException e) {
             mostrarError("No se pudo volver al panel.");
             e.printStackTrace();
         }
+    }
+
+    private ContratoTabla obtenerContratoSeleccionado() {
+        ContratoTabla seleccionado = tablaContratos.getSelectionModel().getSelectedItem();
+
+        if (seleccionado == null) {
+            mostrarError("Selecciona un contrato.");
+            return null;
+        }
+
+        return seleccionado;
+    }
+
+    private boolean esRol(int idRol) {
+        return Sesion.getUsuarioActual() != null
+                && Sesion.getUsuarioActual().getIdRol() == idRol;
+    }
+
+    private void mostrarBoton(Button boton, boolean visible) {
+        boton.setVisible(visible);
+        boton.setManaged(visible);
+    }
+
+    private boolean confirmar(String titulo, String encabezado, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(titulo);
+        alert.setHeaderText(encabezado);
+        alert.setContentText(mensaje);
+
+        Optional<ButtonType> resultado = alert.showAndWait();
+
+        return resultado.isPresent() && resultado.get() == ButtonType.OK;
+    }
+
+    private void volverALogin() throws IOException {
+        FXMLLoader loader = Navegacion.cargarVista("/fxml/login.fxml");
+        Stage stage = (Stage) tablaContratos.getScene().getWindow();
+        Navegacion.cambiarEscena(stage, loader, "Rentify - Login");
     }
 
     private void mostrarError(String mensaje) {

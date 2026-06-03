@@ -10,7 +10,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.control.*;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.ChoiceDialog;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
 
@@ -19,6 +23,11 @@ import java.util.List;
 import java.util.Optional;
 
 public class InmuebleController {
+
+    private static final int ROL_ARRENDADOR = 2;
+
+    private static final int ESTADO_DISPONIBLE = 1;
+    private static final int ESTADO_NO_DISPONIBLE = 3;
 
     @FXML
     private TableView<InmuebleTabla> tablaInmuebles;
@@ -51,32 +60,42 @@ public class InmuebleController {
 
     @FXML
     public void initialize() {
+        configurarColumnas();
+        cargarInmuebles();
+    }
+
+    private void configurarColumnas() {
         colId.setCellValueFactory(new PropertyValueFactory<>("idInmueble"));
         colTitulo.setCellValueFactory(new PropertyValueFactory<>("titulo"));
         colCiudad.setCellValueFactory(new PropertyValueFactory<>("ciudad"));
         colTipo.setCellValueFactory(new PropertyValueFactory<>("tipo"));
         colEstado.setCellValueFactory(new PropertyValueFactory<>("estado"));
         colPrecio.setCellValueFactory(new PropertyValueFactory<>("precioRenta"));
-
-        cargarInmuebles();
     }
 
     @FXML
     private void cargarInmuebles() {
-        if (Sesion.getUsuarioActual() == null) {
-            mostrarError("No hay sesión activa.");
+        if (!esArrendador()) {
+            mostrarError("Solo el arrendador puede gestionar inmuebles.");
+            tablaInmuebles.setItems(FXCollections.observableArrayList());
             return;
         }
 
         List<InmuebleTabla> lista = inmuebleDAO.listarInmueblesPorArrendador(
                 Sesion.getUsuarioActual().getIdUsuario()
         );
+
         ObservableList<InmuebleTabla> datos = FXCollections.observableArrayList(lista);
         tablaInmuebles.setItems(datos);
     }
 
     @FXML
     private void abrirFormularioNuevoInmueble() {
+        if (!esArrendador()) {
+            mostrarError("Solo el arrendador puede registrar inmuebles.");
+            return;
+        }
+
         try {
             FXMLLoader loader = Navegacion.cargarVista("/fxml/inmueble_form.fxml");
             InmuebleFormController controller = loader.getController();
@@ -84,6 +103,7 @@ public class InmuebleController {
 
             Stage stage = (Stage) tablaInmuebles.getScene().getWindow();
             Navegacion.cambiarEscena(stage, loader, "Rentify - Nuevo Inmueble");
+
         } catch (IOException e) {
             mostrarError("No se pudo abrir el formulario de inmueble.");
             e.printStackTrace();
@@ -92,10 +112,16 @@ public class InmuebleController {
 
     @FXML
     private void abrirFormularioEditarInmueble() {
-        InmuebleTabla seleccionado = tablaInmuebles.getSelectionModel().getSelectedItem();
+        if (!esArrendador()) {
+            mostrarError("Solo el arrendador puede editar inmuebles.");
+            return;
+        }
+
+        InmuebleTabla seleccionado = obtenerInmuebleSeleccionado(
+                "Selecciona un inmueble para editar."
+        );
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un inmueble para editar.");
             return;
         }
 
@@ -122,10 +148,16 @@ public class InmuebleController {
 
     @FXML
     private void verDetalleInmueble() {
-        InmuebleTabla seleccionado = tablaInmuebles.getSelectionModel().getSelectedItem();
+        if (!esArrendador()) {
+            mostrarError("Solo el arrendador puede consultar esta pantalla.");
+            return;
+        }
+
+        InmuebleTabla seleccionado = obtenerInmuebleSeleccionado(
+                "Selecciona un inmueble para ver el detalle."
+        );
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un inmueble para ver el detalle.");
             return;
         }
 
@@ -144,6 +176,7 @@ public class InmuebleController {
 
             Stage stage = (Stage) tablaInmuebles.getScene().getWindow();
             Navegacion.cambiarEscena(stage, loader, "Rentify - Detalle de Inmueble");
+
         } catch (IOException e) {
             mostrarError("No se pudo abrir el detalle del inmueble.");
             e.printStackTrace();
@@ -152,10 +185,16 @@ public class InmuebleController {
 
     @FXML
     private void administrarImagenes() {
-        InmuebleTabla seleccionado = tablaInmuebles.getSelectionModel().getSelectedItem();
+        if (!esArrendador()) {
+            mostrarError("Solo el arrendador puede administrar imágenes.");
+            return;
+        }
+
+        InmuebleTabla seleccionado = obtenerInmuebleSeleccionado(
+                "Selecciona un inmueble para administrar sus imágenes."
+        );
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un inmueble para administrar sus imágenes.");
             return;
         }
 
@@ -181,10 +220,16 @@ public class InmuebleController {
 
     @FXML
     private void eliminarInmueble() {
-        InmuebleTabla seleccionado = tablaInmuebles.getSelectionModel().getSelectedItem();
+        if (!esArrendador()) {
+            mostrarError("Solo el arrendador puede eliminar inmuebles.");
+            return;
+        }
+
+        InmuebleTabla seleccionado = obtenerInmuebleSeleccionado(
+                "Selecciona un inmueble para eliminar."
+        );
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un inmueble para eliminar.");
             return;
         }
 
@@ -198,19 +243,15 @@ public class InmuebleController {
             return;
         }
 
-        Alert confirmacion = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmacion.setTitle("Confirmar eliminación");
-        confirmacion.setHeaderText("Eliminar inmueble");
-        confirmacion.setContentText(
+        boolean confirmado = confirmar(
+                "Confirmar eliminación",
+                "Eliminar inmueble",
                 "¿Seguro que deseas eliminar el inmueble \"" +
                         seleccionado.getTitulo() +
                         "\"?\n\nTambién se eliminarán sus imágenes registradas."
         );
 
-        Optional<ButtonType> resultado = confirmacion.showAndWait();
-
-        if (resultado.isEmpty()
-                || resultado.get() != javafx.scene.control.ButtonType.OK) {
+        if (!confirmado) {
             return;
         }
 
@@ -228,19 +269,30 @@ public class InmuebleController {
 
     @FXML
     private void cambiarEstadoInmueble() {
-        InmuebleTabla seleccionado = tablaInmuebles.getSelectionModel().getSelectedItem();
-
-        if (seleccionado == null) {
-            mostrarError("Selecciona un inmueble para cambiar su estado.");
+        if (!esArrendador()) {
+            mostrarError("Solo el arrendador puede cambiar el estado del inmueble.");
             return;
         }
 
+        InmuebleTabla seleccionado = obtenerInmuebleSeleccionado(
+                "Selecciona un inmueble para cambiar su estado."
+        );
+
+        if (seleccionado == null) {
+            return;
+        }
+
+        /*
+         * No se permite cambiar manualmente a Ocupado.
+         * Ese estado debe generarse desde el flujo real:
+         * solicitud aceptada → arrendamiento activo.
+         */
         ChoiceDialog<String> dialog = new ChoiceDialog<>(
                 seleccionado.getEstado(),
                 "Disponible",
-                "Ocupado",
                 "No disponible"
         );
+
         dialog.setTitle("Cambiar estado");
         dialog.setHeaderText("Cambiar estado del inmueble");
         dialog.setContentText("Nuevo estado:");
@@ -256,6 +308,17 @@ public class InmuebleController {
         if ("Disponible".equalsIgnoreCase(nuevoEstado)
                 && arrendamientoDAO.existeArrendamientoActivoPorInmueble(seleccionado.getIdInmueble())) {
             mostrarError("No puedes poner el inmueble como Disponible porque tiene un arrendamiento activo.");
+            return;
+        }
+
+        boolean confirmado = confirmar(
+                "Confirmar cambio de estado",
+                "Cambiar estado del inmueble",
+                "¿Deseas cambiar el inmueble \"" + seleccionado.getTitulo() +
+                        "\" a estado " + nuevoEstado + "?"
+        );
+
+        if (!confirmado) {
             return;
         }
 
@@ -277,28 +340,63 @@ public class InmuebleController {
     @FXML
     private void volverAlPanel() {
         try {
+            if (!esArrendador()) {
+                volverALogin();
+                return;
+            }
+
             FXMLLoader loader = Navegacion.cargarVista("/fxml/arrendador.fxml");
             ArrendadorController controller = loader.getController();
-
-            if (Sesion.getUsuarioActual() != null) {
-                controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
-            }
+            controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
 
             Stage stage = (Stage) tablaInmuebles.getScene().getWindow();
             Navegacion.cambiarEscena(stage, loader, "Rentify - Arrendador");
+
         } catch (IOException e) {
             mostrarError("No se pudo volver al panel.");
             e.printStackTrace();
         }
     }
 
+    private InmuebleTabla obtenerInmuebleSeleccionado(String mensajeError) {
+        InmuebleTabla seleccionado = tablaInmuebles.getSelectionModel().getSelectedItem();
+
+        if (seleccionado == null) {
+            mostrarError(mensajeError);
+            return null;
+        }
+
+        return seleccionado;
+    }
+
     private int convertirEstadoAId(String estado) {
         return switch (estado) {
-            case "Disponible" -> 1;
-            case "Ocupado" -> 2;
-            case "No disponible" -> 3;
-            default -> 0;
+            case "Disponible" -> ESTADO_DISPONIBLE;
+            case "No disponible" -> ESTADO_NO_DISPONIBLE;
+            default -> ESTADO_NO_DISPONIBLE;
         };
+    }
+
+    private boolean esArrendador() {
+        return Sesion.getUsuarioActual() != null
+                && Sesion.getUsuarioActual().getIdRol() == ROL_ARRENDADOR;
+    }
+
+    private boolean confirmar(String titulo, String encabezado, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(titulo);
+        alert.setHeaderText(encabezado);
+        alert.setContentText(mensaje);
+
+        Optional<ButtonType> resultado = alert.showAndWait();
+
+        return resultado.isPresent() && resultado.get() == ButtonType.OK;
+    }
+
+    private void volverALogin() throws IOException {
+        FXMLLoader loader = Navegacion.cargarVista("/fxml/login.fxml");
+        Stage stage = (Stage) tablaInmuebles.getScene().getWindow();
+        Navegacion.cambiarEscena(stage, loader, "Rentify - Login");
     }
 
     private void mostrarError(String mensaje) {
