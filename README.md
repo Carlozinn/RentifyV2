@@ -61,3 +61,15 @@ src/
      │       └── util/
      └── resources/
          └── fxml/
+```
+## Control de versiones
+
+El proyecto utiliza Git y GitHub para el control de versiones.  
+Se maneja una rama principal `main`, una rama de desarrollo `develop` y ramas específicas para funcionalidades o documentación.
+
+## Flujo de trabajo con ramas
+
+- `main`: contiene la versión estable del proyecto.
+- `develop`: contiene los avances integrados durante el desarrollo.
+- `feature/documentacion`: rama utilizada para actualizar la documentación.
+- `feature/database-scripts`: rama utilizada para organizar los scripts de base de datos.
