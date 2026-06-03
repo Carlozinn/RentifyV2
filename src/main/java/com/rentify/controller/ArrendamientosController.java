@@ -12,6 +12,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ChoiceDialog;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -23,6 +24,16 @@ import java.util.List;
 import java.util.Optional;
 
 public class ArrendamientosController {
+
+    private static final int ROL_ARRENDADOR = 2;
+    private static final int ROL_ARRENDATARIO = 3;
+
+    private static final int ESTADO_ARRENDAMIENTO_ACTIVO = 1;
+    private static final int ESTADO_ARRENDAMIENTO_FINALIZADO = 2;
+    private static final int ESTADO_ARRENDAMIENTO_CANCELADO = 3;
+
+    private static final int ESTADO_INMUEBLE_DISPONIBLE = 1;
+    private static final int ESTADO_INMUEBLE_OCUPADO = 2;
 
     @FXML
     private TableView<ArrendamientoTabla> tablaArrendamientos;
@@ -69,6 +80,12 @@ public class ArrendamientosController {
 
     @FXML
     public void initialize() {
+        configurarColumnas();
+        configurarVistaSegunRol();
+        cargarArrendamientos();
+    }
+
+    private void configurarColumnas() {
         colId.setCellValueFactory(new PropertyValueFactory<>("idArrendamiento"));
         colInmueble.setCellValueFactory(new PropertyValueFactory<>("inmueble"));
         colContraparte.setCellValueFactory(new PropertyValueFactory<>("contraparte"));
@@ -76,43 +93,37 @@ public class ArrendamientosController {
         colFechaFin.setCellValueFactory(new PropertyValueFactory<>("fechaFin"));
         colMonto.setCellValueFactory(new PropertyValueFactory<>("montoMensual"));
         colEstado.setCellValueFactory(new PropertyValueFactory<>("estado"));
-
-        configurarVistaSegunRol();
-        cargarArrendamientos();
     }
 
     private void configurarVistaSegunRol() {
-        if (Sesion.getUsuarioActual() != null && Sesion.getUsuarioActual().getIdRol() == 3) {
-            btnGenerarPago.setVisible(false);
-            btnGenerarPago.setManaged(false);
+        boolean esArrendador = esRol(ROL_ARRENDADOR);
 
-            btnGenerarContrato.setVisible(false);
-            btnGenerarContrato.setManaged(false);
-
-            btnCambiarEstado.setVisible(false);
-            btnCambiarEstado.setManaged(false);
-        }
+        mostrarBoton(btnGenerarPago, esArrendador);
+        mostrarBoton(btnGenerarContrato, esArrendador);
+        mostrarBoton(btnCambiarEstado, esArrendador);
     }
 
     @FXML
     private void cargarArrendamientos() {
         if (Sesion.getUsuarioActual() == null) {
             mostrarError("No hay sesión activa.");
+            tablaArrendamientos.setItems(FXCollections.observableArrayList());
             return;
         }
 
         List<ArrendamientoTabla> lista;
 
-        if (Sesion.getUsuarioActual().getIdRol() == 2) {
+        if (esRol(ROL_ARRENDADOR)) {
             lista = arrendamientoDAO.listarArrendamientosComoArrendador(
                     Sesion.getUsuarioActual().getIdUsuario()
             );
-        } else if (Sesion.getUsuarioActual().getIdRol() == 3) {
+        } else if (esRol(ROL_ARRENDATARIO)) {
             lista = arrendamientoDAO.listarArrendamientosComoArrendatario(
                     Sesion.getUsuarioActual().getIdUsuario()
             );
         } else {
             mostrarError("Este módulo no aplica para este rol.");
+            tablaArrendamientos.setItems(FXCollections.observableArrayList());
             return;
         }
 
@@ -122,15 +133,14 @@ public class ArrendamientosController {
 
     @FXML
     private void abrirFormularioPago() {
-        if (Sesion.getUsuarioActual() == null || Sesion.getUsuarioActual().getIdRol() != 2) {
+        if (!esRol(ROL_ARRENDADOR)) {
             mostrarError("Solo el arrendador puede generar pagos.");
             return;
         }
 
-        ArrendamientoTabla seleccionado = tablaArrendamientos.getSelectionModel().getSelectedItem();
+        ArrendamientoTabla seleccionado = obtenerArrendamientoSeleccionado();
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un arrendamiento para generar pago.");
             return;
         }
 
@@ -164,15 +174,14 @@ public class ArrendamientosController {
 
     @FXML
     private void abrirFormularioContrato() {
-        if (Sesion.getUsuarioActual() == null || Sesion.getUsuarioActual().getIdRol() != 2) {
+        if (!esRol(ROL_ARRENDADOR)) {
             mostrarError("Solo el arrendador puede generar contratos.");
             return;
         }
 
-        ArrendamientoTabla seleccionado = tablaArrendamientos.getSelectionModel().getSelectedItem();
+        ArrendamientoTabla seleccionado = obtenerArrendamientoSeleccionado();
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un arrendamiento para generar contrato.");
             return;
         }
 
@@ -201,24 +210,28 @@ public class ArrendamientosController {
 
     @FXML
     private void cambiarEstadoArrendamiento() {
-        if (Sesion.getUsuarioActual() == null || Sesion.getUsuarioActual().getIdRol() != 2) {
+        if (!esRol(ROL_ARRENDADOR)) {
             mostrarError("Solo el arrendador puede cambiar el estado del arrendamiento.");
             return;
         }
 
-        ArrendamientoTabla seleccionado = tablaArrendamientos.getSelectionModel().getSelectedItem();
+        ArrendamientoTabla seleccionado = obtenerArrendamientoSeleccionado();
 
         if (seleccionado == null) {
-            mostrarError("Selecciona un arrendamiento.");
+            return;
+        }
+
+        if (!"Activo".equalsIgnoreCase(seleccionado.getEstado())) {
+            mostrarError("Solo puedes finalizar o cancelar arrendamientos activos.");
             return;
         }
 
         ChoiceDialog<String> dialog = new ChoiceDialog<>(
-                seleccionado.getEstado(),
-                "Activo",
+                "Finalizado",
                 "Finalizado",
                 "Cancelado"
         );
+
         dialog.setTitle("Cambiar estado");
         dialog.setHeaderText("Cambiar estado del arrendamiento");
         dialog.setContentText("Nuevo estado:");
@@ -230,69 +243,133 @@ public class ArrendamientosController {
         }
 
         String nuevoEstado = resultado.get();
+
+        boolean confirmado = confirmar(
+                "Confirmar cambio de estado",
+                "Cambiar arrendamiento a " + nuevoEstado,
+                "¿Deseas cambiar este arrendamiento a estado " + nuevoEstado + "?\n\n" +
+                        "Inmueble: " + seleccionado.getInmueble() + "\n" +
+                        "Contraparte: " + seleccionado.getContraparte() + "\n\n" +
+                        "El inmueble volverá a quedar disponible."
+        );
+
+        if (!confirmado) {
+            return;
+        }
+
         int idEstadoArrendamiento = convertirEstadoArrendamientoAId(nuevoEstado);
 
-        boolean actualizado = arrendamientoDAO.actualizarEstadoArrendamiento(
+        boolean arrendamientoActualizado = arrendamientoDAO.actualizarEstadoArrendamiento(
                 seleccionado.getIdArrendamiento(),
                 idEstadoArrendamiento
         );
 
-        if (!actualizado) {
+        if (!arrendamientoActualizado) {
             mostrarError("No se pudo actualizar el estado del arrendamiento.");
             return;
         }
 
-        int idInmueble = arrendamientoDAO.obtenerIdInmueblePorArrendamiento(seleccionado.getIdArrendamiento());
+        int idInmueble = arrendamientoDAO.obtenerIdInmueblePorArrendamiento(
+                seleccionado.getIdArrendamiento()
+        );
 
         if (idInmueble > 0) {
-            int idEstadoInmueble;
+            boolean inmuebleActualizado = inmuebleDAO.actualizarEstadoInmueble(
+                    idInmueble,
+                    ESTADO_INMUEBLE_DISPONIBLE
+            );
 
-            if ("Activo".equalsIgnoreCase(nuevoEstado)) {
-                idEstadoInmueble = 2;
-            } else {
-                idEstadoInmueble = 1;
+            if (!inmuebleActualizado) {
+                mostrarError("El arrendamiento se actualizó, pero no se pudo actualizar el estado del inmueble.");
+                cargarArrendamientos();
+                return;
             }
-
-            inmuebleDAO.actualizarEstadoInmueble(idInmueble, idEstadoInmueble);
         }
 
         cargarArrendamientos();
         mostrarInfo("Estado del arrendamiento actualizado correctamente.");
     }
 
-    private int convertirEstadoArrendamientoAId(String estado) {
-        return switch (estado) {
-            case "Activo" -> 1;
-            case "Finalizado" -> 2;
-            case "Cancelado" -> 3;
-            default -> 1;
-        };
-    }
-
     @FXML
     private void volverAlPanel() {
         try {
+            if (Sesion.getUsuarioActual() == null) {
+                volverALogin();
+                return;
+            }
+
             FXMLLoader loader;
             String titulo;
 
-            if (Sesion.getUsuarioActual() != null && Sesion.getUsuarioActual().getIdRol() == 2) {
+            if (esRol(ROL_ARRENDADOR)) {
                 loader = Navegacion.cargarVista("/fxml/arrendador.fxml");
                 ArrendadorController controller = loader.getController();
                 controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
                 titulo = "Rentify - Arrendador";
-            } else {
+            } else if (esRol(ROL_ARRENDATARIO)) {
                 loader = Navegacion.cargarVista("/fxml/arrendatario.fxml");
                 ArrendatarioController controller = loader.getController();
                 controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
                 titulo = "Rentify - Arrendatario";
+            } else {
+                mostrarError("Este módulo no aplica para este rol.");
+                return;
             }
 
             Stage stage = (Stage) tablaArrendamientos.getScene().getWindow();
             Navegacion.cambiarEscena(stage, loader, titulo);
+
         } catch (IOException e) {
             mostrarError("No se pudo volver al panel.");
             e.printStackTrace();
         }
+    }
+
+    private ArrendamientoTabla obtenerArrendamientoSeleccionado() {
+        ArrendamientoTabla seleccionado = tablaArrendamientos.getSelectionModel().getSelectedItem();
+
+        if (seleccionado == null) {
+            mostrarError("Selecciona un arrendamiento.");
+            return null;
+        }
+
+        return seleccionado;
+    }
+
+    private int convertirEstadoArrendamientoAId(String estado) {
+        return switch (estado) {
+            case "Activo" -> ESTADO_ARRENDAMIENTO_ACTIVO;
+            case "Finalizado" -> ESTADO_ARRENDAMIENTO_FINALIZADO;
+            case "Cancelado" -> ESTADO_ARRENDAMIENTO_CANCELADO;
+            default -> ESTADO_ARRENDAMIENTO_ACTIVO;
+        };
+    }
+
+    private boolean esRol(int idRol) {
+        return Sesion.getUsuarioActual() != null
+                && Sesion.getUsuarioActual().getIdRol() == idRol;
+    }
+
+    private void mostrarBoton(Button boton, boolean visible) {
+        boton.setVisible(visible);
+        boton.setManaged(visible);
+    }
+
+    private boolean confirmar(String titulo, String encabezado, String mensaje) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(titulo);
+        alert.setHeaderText(encabezado);
+        alert.setContentText(mensaje);
+
+        Optional<ButtonType> resultado = alert.showAndWait();
+
+        return resultado.isPresent() && resultado.get() == ButtonType.OK;
+    }
+
+    private void volverALogin() throws IOException {
+        FXMLLoader loader = Navegacion.cargarVista("/fxml/login.fxml");
+        Stage stage = (Stage) tablaArrendamientos.getScene().getWindow();
+        Navegacion.cambiarEscena(stage, loader, "Rentify - Login");
     }
 
     private void mostrarError(String mensaje) {

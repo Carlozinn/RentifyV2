@@ -19,6 +19,8 @@ import java.util.List;
 
 public class MisSolicitudesController {
 
+    private static final int ROL_ARRENDATARIO = 3;
+
     @FXML
     private TableView<SolicitudTabla> tablaSolicitudes;
 
@@ -45,26 +47,26 @@ public class MisSolicitudesController {
 
     @FXML
     public void initialize() {
+        configurarColumnas();
+        cargarSolicitudes();
+    }
+
+    private void configurarColumnas() {
         colId.setCellValueFactory(new PropertyValueFactory<>("idSolicitud"));
         colInmueble.setCellValueFactory(new PropertyValueFactory<>("inmueble"));
         colMensaje.setCellValueFactory(new PropertyValueFactory<>("mensaje"));
         colFecha.setCellValueFactory(new PropertyValueFactory<>("fechaSolicitud"));
         colEstado.setCellValueFactory(new PropertyValueFactory<>("estado"));
-
-        cargarSolicitudes();
     }
 
     @FXML
     private void cargarSolicitudes() {
-        if (Sesion.getUsuarioActual() == null) {
-            mostrarError("No hay sesión activa.");
+        if (!esArrendatario()) {
+            mostrarError("Solo el arrendatario puede consultar sus solicitudes.");
+            tablaSolicitudes.setItems(FXCollections.observableArrayList());
             return;
         }
 
-        /*
-         * También actualizamos vencidas cuando el arrendatario consulta
-         * sus solicitudes, para que vea el estado actualizado.
-         */
         solicitudDAO.actualizarSolicitudesPendientesVencidas();
 
         List<SolicitudTabla> lista = solicitudDAO.listarSolicitudesPorArrendatario(
@@ -78,19 +80,33 @@ public class MisSolicitudesController {
     @FXML
     private void volverAlPanel() {
         try {
+            if (!esArrendatario()) {
+                volverALogin();
+                return;
+            }
+
             FXMLLoader loader = Navegacion.cargarVista("/fxml/arrendatario.fxml");
             ArrendatarioController controller = loader.getController();
-
-            if (Sesion.getUsuarioActual() != null) {
-                controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
-            }
+            controller.setNombreUsuario(Sesion.getUsuarioActual().getNombre());
 
             Stage stage = (Stage) tablaSolicitudes.getScene().getWindow();
             Navegacion.cambiarEscena(stage, loader, "Rentify - Arrendatario");
+
         } catch (IOException e) {
             mostrarError("No se pudo volver al panel.");
             e.printStackTrace();
         }
+    }
+
+    private boolean esArrendatario() {
+        return Sesion.getUsuarioActual() != null
+                && Sesion.getUsuarioActual().getIdRol() == ROL_ARRENDATARIO;
+    }
+
+    private void volverALogin() throws IOException {
+        FXMLLoader loader = Navegacion.cargarVista("/fxml/login.fxml");
+        Stage stage = (Stage) tablaSolicitudes.getScene().getWindow();
+        Navegacion.cambiarEscena(stage, loader, "Rentify - Login");
     }
 
     private void mostrarError(String mensaje) {

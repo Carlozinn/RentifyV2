@@ -154,7 +154,7 @@ public class InmuebleFormController {
     }
 
     @FXML
-    private void guardarInmueble() {
+    private void    guardarInmueble() {
         if (Sesion.getUsuarioActual() == null) {
             lblMensaje.setText("No hay sesión activa.");
             return;
